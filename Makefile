@@ -6,5 +6,5 @@ OBJ = ip_packet_monitor.o rfc/rfc_protocol_ref.o
 %.o: %.c &(DEPS)
 	$(CC) $(CFLAGS) -c -o $@ $<
 	
-go: $(OBJ)
+ip_packet_monitor: $(OBJ)
 	gcc $(CFLAGS) -o $@ $^

@@ -2,6 +2,9 @@
  * ASSIGNED INTERNET PROTOCOL NUMBER TO NAME REFERENCE
  * RFC 790 Assigned Numbers
  **/
+ 
+ #include <stdlib.h>
+ #include <stdio.h>
 
 /**
  * Lookup protocol name, given an assigned protocol number
