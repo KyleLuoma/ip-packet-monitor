@@ -121,7 +121,7 @@ createAndOpenFile ()
     sprintf (fileName, "%s%s", timeString, ".csv");
     FILE *file;
     file = fopen (fileName, "w");
-    fprintf (file, "eth_src_addr,eth_dst_addr,eth_prot,IP_vers,IHL,type_svc,tot_len,id,TTL,IP_prot,hdr_chksm,src_ip,dst_ip\n");
+    fprintf (file, "eth_src_addr,eth_dst_addr,eth_prot,IP_vers,IHL,type_svc,tot_len,id,TTL,IP_prot,IP_prot_name,hdr_chksm,src_ip,dst_ip\n");
     return file;
 }
 
@@ -172,6 +172,8 @@ saveHeaderDataToFile (unsigned char *buffer, FILE *fp)
     fprintf (fp, "%d,", ip->ttl);
     /* IP_prot */
     fprintf (fp, "%d,", (unsigned int)ip->protocol);
+    /* IP_prot_name */
+    fprintf (fp, "%s,", get_protocol_name (ip->protocol)); 
     /* hdr_chksm */
     fprintf (fp, "%d,", ip->check);
     /* src_ip */
@@ -231,6 +233,7 @@ extractAndDisplayPacket(unsigned char *buffer, bool print_data)
     printf ("\t|- Identification : &d\n", ip->id);
     printf ("\t|- Time to Live : %d\n", ip->ttl);
     printf ("\t|- Protocol : %d\n", (unsigned int)ip->protocol);
+    printf ("\t|- Protocol name : %s\n", get_protocol_name (ip->protocol));
     printf ("\t|- Header Checksum : %d\n", ip->check);
     printf ("\t|- Source IP        : %s\n", inet_ntoa (source.sin_addr));
     printf ("\t|- Destination   IP : %s\n", inet_ntoa (dest.sin_addr));
