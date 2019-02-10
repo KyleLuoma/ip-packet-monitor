@@ -31,10 +31,10 @@
 
 
 void interruptHandler(int sig);
-int  saveHeaderDataToFile(unsigned char *buffer, FILE *fp);
+int  saveHeaderDataToFile(unsigned char *buffer, FILE *fp, int packet_count);
 int  extractAndDisplayPacket(unsigned char *buffer, bool displayData);
 void waitAndReceivePacket(unsigned char* buffer, int sock_r);
-void getTimeString(char* timeStringBuffer);
+void getTimeString(char* timeStringBuffer, bool labels);
 FILE* createAndOpenFile();
 
 bool EXIT_PROGRAM = false;
@@ -57,7 +57,7 @@ main (int argc, char *argv[])
     sock_r = socket(AF_PACKET, SOCK_RAW, htons(ETH_P_ALL));
     if (sock_r < 0) 
     {
-        printf ("Error in socket\n");
+        printf ("Error in socket, make sure you are running with root privileges.\n");
         return -1;
     }
     
@@ -79,6 +79,7 @@ main (int argc, char *argv[])
     char inputChar;
     int packetSize;
     bool keepRunning = true;
+    int packet_count = 0;
     
     /* --- Packet capture loop, run until user terminates (ctrl-c) --- */
     while (keepRunning & !EXIT_PROGRAM) 
@@ -86,7 +87,11 @@ main (int argc, char *argv[])
         fprintf (stdout, ".");
         waitAndReceivePacket (buffer, sock_r);
         //packetSize = extractAndDisplayPacket(buffer, print_data);
-        packetSize = saveHeaderDataToFile (buffer, file);
+        packetSize = saveHeaderDataToFile (buffer, file, ++packet_count);
+        if (packet_count >= 9)
+        {
+            packet_count = 0;
+        }
     }
     
     /* --- Release system resources: --- */
@@ -116,20 +121,18 @@ createAndOpenFile ()
 {
     /* ---Create a file to save traffic--- */
     char timeString[24];
-    getTimeString (timeString);
+    getTimeString (timeString, true);
     char fileName[29];
     sprintf (fileName, "%s%s", timeString, ".csv");
     FILE *file;
     file = fopen (fileName, "w");
-    fprintf (file, "eth_src_addr,eth_dst_addr,eth_prot,IP_vers,IHL,type_svc,tot_len,id,TTL,IP_prot,IP_prot_name,hdr_chksm,src_ip,dst_ip\n");
+    fprintf (file, "packet_id, eth_src_addr,eth_dst_addr,eth_prot,IP_vers,IHL,type_svc,tot_len,id,TTL,IP_prot,IP_prot_name,hdr_chksm,src_ip,dst_ip\n");
     return file;
 }
 
 int 
-saveHeaderDataToFile (unsigned char *buffer, FILE *fp) 
+saveHeaderDataToFile (unsigned char *buffer, FILE *fp, int packet_count) 
 {
-    char timeString[24];
-    getTimeString (timeString);
     struct ethhdr *eth = (struct ethhdr*)(buffer);
     struct iphdr *ip = (struct iphdr*)(buffer + sizeof (struct ethhdr));
     struct sockaddr_in source, dest;
@@ -137,7 +140,12 @@ saveHeaderDataToFile (unsigned char *buffer, FILE *fp)
     memset (&dest, 0, sizeof (dest));
     source.sin_addr.s_addr = ip->saddr;
     dest.sin_addr.s_addr = ip->daddr;
-    
+    char time_string[24];
+    getTimeString(time_string, false);
+
+    /* packet_id */
+    fprintf (fp, "%s%d,", time_string, packet_count);
+
     /* eth_src_addr */
     fprintf (fp, "%.2X-%.2X-%.2X-%.2X-%.2X-%.2X,", 
              eth->h_source[0], 
@@ -194,7 +202,7 @@ int
 extractAndDisplayPacket(unsigned char *buffer, bool print_data) 
 {
     char timeString[24];
-    getTimeString (timeString);
+    getTimeString (timeString, true);
     /* ---Extract the ethernet header--- */
     struct ethhdr *eth = (struct ethhdr *)(buffer);
     printf ("\nEthernet Header\n");
@@ -281,19 +289,31 @@ interruptHandler (int sig)
 }
 
 void 
-getTimeString (char* time_string_buffer) 
+getTimeString (char *time_string_buffer, bool labels) 
 {
     time_t time_data;
     time (&time_data);
     struct tm *gm_time = gmtime (&time_data);
     
-    snprintf (time_string_buffer, 24, "Y%dM%dD%dH%dM%dS%d", 
+    if (labels)
+    {
+        snprintf (time_string_buffer, 24, "Y%dM%dD%dH%dM%dS%d", 
         gm_time->tm_year + 1900, 
         gm_time->tm_mon + 1, 
         gm_time->tm_mday, 
         gm_time->tm_hour, 
         gm_time->tm_min, 
         gm_time->tm_sec);
+    }
+    else
+    {
+        snprintf (time_string_buffer, 24, "%d%d%d%d%d%d", 
+        gm_time->tm_year + 1900, 
+        gm_time->tm_mon + 1, 
+        gm_time->tm_mday, 
+        gm_time->tm_hour, 
+        gm_time->tm_min, 
+        gm_time->tm_sec);
+    }
 }
-
 
